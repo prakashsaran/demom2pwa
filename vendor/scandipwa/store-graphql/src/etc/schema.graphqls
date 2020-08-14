@@ -1,0 +1,31 @@
+##
+# ScandiPWA_CatalogGraphQl
+#
+# @category    ScandiPWA
+# @package     ScandiPWA_StoreGraphQL
+# @author      Alfreds Genkins <info@scandiweb.com>
+# @author      Teodor Moquist <tm@scandesignmedia.com>
+# @copyright   Copyright (c) 2018 Scandiweb, Ltd (https://scandiweb.com)
+##
+
+type Query {
+    storeList: [StoreConfig] @resolver(class: "ScandiPWA\\StoreGraphQl\\Model\\Resolver\\StoreListResolver") @doc(description: "The store list query")
+}
+
+type StoreConfig {
+    name: String
+    is_active: Boolean
+    default_country: String
+    terms_are_enabled: Boolean @doc(description: "Terms and conditions are enabled for checkout")
+    cookie_text: String @doc(description: "Cookie popup - Text")
+    cookie_link: String @doc(description: "Cookie popup - Cookie Privacy Page Link")
+    pagination_frame: Int @doc(description: "How many pagination links to display")
+    pagination_frame_skip: Int @doc(description: "Number of links that are skipped ahead before showing the next set of links in the pagination")
+    anchor_text_for_previous: String @doc(description: "Alternative text for the previous pages link in the pagination menu")
+    anchor_text_for_next: String @doc(description: "Alternative text for the next pages link in the pagination menu")
+    demo_notice: Boolean @doc(description: "Demo notice enabled for store")
+    reviews_allow_guest: Boolean @doc(description: "Are guest reviews enabled")
+    reviews_are_enabled: Boolean @doc(description: "Are reviews enabled")
+    guest_checkout: Boolean  @doc(description: "Is guest checkout enabled")
+    is_email_confirmation_required: Boolean  @doc(description: "Is customer email confirmation enabled")
+}

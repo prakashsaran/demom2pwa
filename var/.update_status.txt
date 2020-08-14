@@ -1,0 +1,2 @@
+[2020-08-10 11:22:03 UTC] Magento is not installed.
+[2020-08-10 11:23:03 UTC] Magento is not installed.

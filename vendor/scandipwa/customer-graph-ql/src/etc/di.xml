@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * ScandiPWA_CustomerGraphQl
+ *
+ * @category    Scandiweb
+ * @package     ScandiPWA_CustomerGraphQl
+ * @author      Kirils Scerba <info@scandiweb.com>
+ * @copyright   Copyright (c) 2019 Scandiweb, Ltd (https://scandiweb.com)
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <preference for="Magento\CustomerGraphQl\Model\Customer\ExtractCustomerData"
+                type="ScandiPWA\CustomerGraphQl\Model\Customer\ExtractCustomerData"/>
+    <preference for="Magento\CustomerGraphQl\Model\Customer\GetCustomer"
+                type="ScandiPWA\CustomerGraphQl\Model\Customer\GetCustomer"/>
+    <preference for="Magento\CustomerGraphQl\Model\Resolver\GenerateCustomerToken"
+                type="ScandiPWA\CustomerGraphQl\Model\Resolver\GenerateCustomerToken"/>
+	<type name="Magento\Catalog\Helper\Data">
+        <arguments>
+            <argument name="customerSession" xsi:type="object">ScandiPWA\CustomerGraphQl\Model\Session</argument>
+        </arguments>
+    </type>
+</config>

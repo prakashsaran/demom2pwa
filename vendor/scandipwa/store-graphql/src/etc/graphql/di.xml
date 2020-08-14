@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+/**
+ * ScandiPWA_StoreGraphQL
+ *
+ * @category    Scandiweb
+ * @package     ScandiPWA_StoreGraphQL
+ * @author      Alfreds Genkins <info@scandiweb.com>
+ * @author      Teodor Moquist <tm@scandesignmedia.com>
+ * @copyright   Copyright (c) 2018 Scandiweb, Ltd (https://scandiweb.com)
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="Magento\StoreGraphQl\Model\Resolver\Store\StoreConfigDataProvider">
+        <arguments>
+            <argument name="extendedConfigData">
+                <item name="default_country" xsi:type="string">general/country/default</item>
+                <item name="terms_are_enabled" xsi:type="string">checkout/options/enable_agreements</item>
+                <item name="cookie_text" xsi:type="string">content_customization/cookie_content/cookie_text</item>
+                <item name="cookie_link" xsi:type="string">content_customization/cookie_content/cookie_link</item>
+                <item name="pagination_frame" xsi:type="string">design/pagination/pagination_frame</item>
+                <item name="pagination_frame_skip" xsi:type="string">design/pagination/pagination_frame_skip</item>
+                <item name="anchor_text_for_previous" xsi:type="string">design/pagination/anchor_text_for_previous</item>
+                <item name="anchor_text_for_next" xsi:type="string">design/pagination/anchor_text_for_next</item>
+                <item name="demo_notice" xsi:type="string">design/head/demonotice</item>
+                <item name="reviews_allow_guest" xsi:type="string">catalog/review/allow_guest</item>
+                <item name="reviews_are_enabled" xsi:type="string">catalog/review/active</item>
+                <item name="guest_checkout" xsi:type="string">checkout/options/guest_checkout</item>
+                <item name="is_email_confirmation_required" xsi:type="string">customer/create_account/confirm</item>
+            </argument>
+        </arguments>
+    </type>
+</config>
