@@ -1,0 +1,201 @@
+const { resolve } = require('path');
+
+function createProjectFromVenia({ fs, tasks, options }) {
+    const npmCli = options.npmClient;
+
+    const toCopyFromPackageJson = [
+        'main',
+        'browser',
+        'dependencies',
+        'devDependencies',
+        'optionalDependencies',
+        'engines',
+        'pwa-studio'
+    ];
+    const scriptsToCopy = [
+        'buildpack',
+        'build',
+        'build:analyze',
+        'build:dev',
+        'build:prod',
+        'clean',
+        'download-schema',
+        'lint',
+        'prettier',
+        'prettier:check',
+        'prettier:fix',
+        'start',
+        'start:debug',
+        'validate-queries',
+        'watch'
+    ];
+    const scriptsToInsert = {
+        storybook: 'start-storybook -p 9001 -c src/.storybook',
+        'storybook:build': 'build-storybook -c src/.storybook -o storybook-dist'
+    };
+
+    const filesToIgnore = [
+        'CHANGELOG*',
+        'LICENSE*',
+        '_buildpack',
+        '_buildpack/**',
+        // These tests are teporarily removed until we can implement a test
+        // harness for the scaffolded app. See PWA-508.
+        '**/__tests__',
+        '**/__tests__/**'
+    ];
+    const ignoresGlob = `{${filesToIgnore.join(',')}}`;
+
+    return {
+        after({ options }) {
+            // The venia-concept directory doesn't have its own babel.config.js
+            // since that would interfere with monorepo configuration.
+            // Therefore there is nothing to copy, so we use the "after" event
+            // to write that file directly.
+            fs.outputFileSync(
+                resolve(options.directory, 'babel.config.js'),
+                "module.exports = { presets: ['@magento/peregrine'] };\n",
+                'utf8'
+            );
+        },
+        visitor: {
+            // Modify package.json with user details before copying it.
+            'package.json': ({
+                path,
+                targetPath,
+                options: { name, author }
+            }) => {
+                const pkgTpt = fs.readJsonSync(path);
+                const pkg = {
+                    name,
+                    private: true,
+                    version: '0.0.1',
+                    description:
+                        'A new project based on @magento/venia-concept',
+                    author,
+                    license: 'UNLICENSED',
+                    scripts: {}
+                };
+                toCopyFromPackageJson.forEach(prop => {
+                    pkg[prop] = pkgTpt[prop];
+                });
+
+                // The venia-concept template is part of the monorepo, which
+                // uses yarn for workspaces. But if the user wants to use
+                // npm, then the scripts which use `yarn` must change.
+                const toPackageScript = script => {
+                    const outputScript = script.replace(/\bvenia\b/g, name);
+                    return npmCli === 'npm'
+                        ? outputScript.replace(/yarn run/g, 'npm run')
+                        : outputScript;
+                };
+
+                if (!pkgTpt.scripts) {
+                    throw new Error(
+                        JSON.stringify(pkgTpt, null, 2) +
+                            '\ndoes not have a "scripts"'
+                    );
+                }
+                scriptsToCopy.forEach(name => {
+                    if (pkgTpt.scripts[name]) {
+                        pkg.scripts[name] = toPackageScript(
+                            pkgTpt.scripts[name]
+                        );
+                    }
+                });
+                Object.keys(scriptsToInsert).forEach(name => {
+                    pkg.scripts[name] = toPackageScript(scriptsToInsert[name]);
+                });
+
+                if (process.env.DEBUG_PROJECT_CREATION) {
+                    setDebugDependencies(fs, pkg);
+                }
+
+                fs.outputJsonSync(targetPath, pkg, {
+                    spaces: 2
+                });
+            },
+            '.graphqlconfig': ({ path, targetPath, options: { name } }) => {
+                const config = fs.readJsonSync(path);
+                config.projects[name] = config.projects.venia;
+                delete config.projects.venia;
+                fs.outputJsonSync(targetPath, config, { spaces: 2 });
+            },
+            // These tasks are sequential so we must ignore before we copy.
+            [ignoresGlob]: tasks.IGNORE,
+            '**/*': tasks.COPY
+        }
+    };
+}
+
+function setDebugDependencies(fs, pkg) {
+    console.warn(
+        'DEBUG_PROJECT_CREATION: Debugging Venia _buildpack/create.js, so we will assume we are inside the pwa-studio repo and replace those package dependency declarations with local file paths.'
+    );
+
+    const { execSync } = require('child_process');
+    const overridden = {};
+    const monorepoDir = resolve(__dirname, '../../../');
+
+    // The Yarn "workspaces info" command outputs JSON as of v1.22.4.
+    // The -s flag suppresses all other non-JSON logging output.
+    const yarnWorkspaceInfoCmd = 'yarn -s workspaces info';
+    const workspaceInfo = execSync(yarnWorkspaceInfoCmd, { cwd: monorepoDir });
+
+    let packageDirs;
+    try {
+        packageDirs = Object.values(JSON.parse(workspaceInfo)).map(
+            ({ location }) => resolve(monorepoDir, location)
+        );
+    } catch (e) {
+        throw new Error(
+            `DEBUG_PROJECT_CREATION: Could not parse output of '${yarnWorkspaceInfoCmd}:\n${workspaceInfo}. Please check your version of yarn is v1.22.4+.`
+        );
+    }
+
+    packageDirs.forEach(packageDir => {
+        const name = fs.readJsonSync(resolve(packageDir, 'package.json')).name;
+        const packagesToSkip = [
+            '@magento/create-pwa',
+            '@magento/venia-concept'
+        ];
+
+        if (packagesToSkip.includes(name)) {
+            return;
+        }
+
+        console.warn(`DEBUG_PROJECT_CREATION: Packing ${name} for local usage`);
+        let filename;
+        let packOutput;
+        try {
+            packOutput = execSync('npm pack -s --ignore-scripts --json', {
+                cwd: packageDir
+            });
+            filename = JSON.parse(packOutput)[0].filename;
+        } catch (e) {
+            throw new Error(
+                `DEBUG_PROJECT_CREATION: npm pack in ${name} package failed: output was ${packOutput}\n\nerror was ${
+                    e.message
+                }`
+            );
+        }
+        const localDep = `file://${resolve(packageDir, filename)}`;
+        ['dependencies', 'devDependencies', 'optionalDependencies'].forEach(
+            depType => {
+                if (pkg[depType] && pkg[depType][name]) {
+                    overridden[name] = localDep;
+                    pkg[depType][name] = localDep;
+                }
+            }
+        );
+    });
+    if (Object.keys(overridden).length > 0) {
+        console.warn(
+            'DEBUG_PROJECT_CREATION: Resolved the following packages via local tarball',
+            JSON.stringify(overridden, null, 2)
+        );
+        pkg.resolutions = Object.assign({}, pkg.resolutions, overridden);
+    }
+}
+
+module.exports = createProjectFromVenia;
